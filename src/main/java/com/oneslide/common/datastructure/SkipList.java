@@ -4,9 +4,9 @@ import java.util.Arrays;
 import java.util.Optional;
 
 public class SkipList<T extends Comparable> {
-
+    /*the biggest level*/
     private int topLevel=0;
-
+    /*the start point of skip-list*/
     private Node<T> top;
 
     private static class Node<T extends Comparable>{
@@ -69,8 +69,6 @@ public class SkipList<T extends Comparable> {
         }
         // find the predecessor node
         Node[] predecessors=new Node[temp.level];
-
-        predecessors[0]=top;
         Node<T> current=top;
         while (true){
             // reach the tail of current level
