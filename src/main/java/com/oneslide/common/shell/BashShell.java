@@ -1,14 +1,20 @@
 package com.oneslide.common.shell;
 
+import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
+import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
@@ -55,7 +61,7 @@ public class BashShell {
      * @param command shell command
      * @return ShellResult which contains stderr and stdout
      **/
-    public static ShellResult executeCommand(String command, String path) {
+    public static ShellResult executeCommand(String command, String path, Optional<String> charset) {
         try {
             // generate command line according to platform
             String[] commander = platformSpecificCommand(command);
@@ -65,32 +71,34 @@ public class BashShell {
             } else {
                 process = Runtime.getRuntime().exec(commander);
             }
+
             // use a separate process to read buffer to avoid os buffer overflow
             List<CompletableFuture<ShellResult>> resultFuture = Stream.of(process)
                     .map(cmdlineProcess -> CompletableFuture.supplyAsync(() -> {
                         ShellResult result = new ShellResult();
-                        StringBuffer stdoutMsg = new StringBuffer();
-                        StringBuffer stderrMsg = new StringBuffer();
+                        ByteOutputStream stdout = new ByteOutputStream();
+                        ByteOutputStream stderr = new ByteOutputStream();
                         InputStream inputStream = cmdlineProcess.getInputStream();
                         InputStream errStream = cmdlineProcess.getErrorStream();
-                        byte[] buffer = new byte[1024];
-                        byte[] errBuffer1 = new byte[1024];
-                        while (process.isAlive()) {
-                            try {
-                                getStreamText(inputStream, stdoutMsg, buffer);
-                                getStreamText(errStream, stderrMsg, errBuffer1);
-                            } catch (IOException e) {
-                                e.printStackTrace();
+                        try {
+                            while (inputStream.available() > 0 || errStream.available() > 0 || process.isAlive()) {
+                                stdout.write(inputStream);
+                                stderr.write(errStream);
                             }
+                            inputStream.close();
+                            errStream.close();
+
+                            result.stdout = new String(stdout.getBytes(),charset.orElse(StandardCharsets.UTF_8.name()));
+                            result.stderr = new String(stderr.getBytes(),charset.orElse(StandardCharsets.UTF_8.name()));
+                            if (process.exitValue() != 0) {
+                                result.isSuccess = false;
+                            } else {
+                                result.isSuccess = true;
+                            }
+                            cmdlineProcess.destroy();
+                        } catch (IOException e) {
+                            e.printStackTrace();
                         }
-                        result.stdout = stdoutMsg.toString();
-                        result.stderr = stderrMsg.toString();
-                        if (process.exitValue() != 0) {
-                            result.isSuccess = false;
-                        } else {
-                            result.isSuccess = true;
-                        }
-                        cmdlineProcess.destroy();
                         return result;
                     })).collect(Collectors.toList());
             process.waitFor(Common.COMMAND_LINE_TIMEOUT, TimeUnit.SECONDS);
@@ -109,7 +117,7 @@ public class BashShell {
     }
 
     public static ShellResult executeCommand(String command) throws Exception {
-        return executeCommand(command, null);
+        return executeCommand(command, null,Optional.empty());
     }
 
     // generate platform specific command line
@@ -122,16 +130,6 @@ public class BashShell {
         }
     }
 
-    /*input stream char sequence concat*/
-    private static StringBuffer getStreamText(InputStream inputStream, StringBuffer msg, byte[] buffer) throws IOException {
-        int n;
-        while ((n = inputStream.read(buffer)) > 0) {
-            for (int i = 0; i < n; i++) {
-                msg.append((char) buffer[i]);
-            }
-        }
-        return msg;
-    }
 
     /**
      * get current {@link OSType}
@@ -173,6 +171,5 @@ public class BashShell {
         }
     }
 
-
-
 }
+
