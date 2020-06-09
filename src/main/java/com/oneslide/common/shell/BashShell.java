@@ -1,18 +1,10 @@
 package com.oneslide.common.shell;
 
-import com.sun.xml.internal.messaging.saaj.util.ByteInputStream;
-import com.sun.xml.internal.messaging.saaj.util.ByteOutputStream;
-
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
-import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.Arrays;
-import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
@@ -76,20 +68,20 @@ public class BashShell {
             List<CompletableFuture<ShellResult>> resultFuture = Stream.of(process)
                     .map(cmdlineProcess -> CompletableFuture.supplyAsync(() -> {
                         ShellResult result = new ShellResult();
-                        ByteOutputStream stdout = new ByteOutputStream();
-                        ByteOutputStream stderr = new ByteOutputStream();
+                        ByteConvenientStream stdout = new ByteConvenientStream();
+                        ByteConvenientStream stderr = new ByteConvenientStream();
                         InputStream inputStream = cmdlineProcess.getInputStream();
                         InputStream errStream = cmdlineProcess.getErrorStream();
                         try {
                             while (inputStream.available() > 0 || errStream.available() > 0 || process.isAlive()) {
-                                stdout.write(inputStream);
-                                stderr.write(errStream);
+                                stdout.writeWithInputStream(inputStream);
+                                stderr.writeWithInputStream(errStream);
                             }
                             inputStream.close();
                             errStream.close();
 
-                            result.stdout = new String(stdout.getBytes(),charset.orElse(StandardCharsets.UTF_8.name()));
-                            result.stderr = new String(stderr.getBytes(),charset.orElse(StandardCharsets.UTF_8.name()));
+                            result.stdout = new String(stdout.toByteArray(),charset.orElse(StandardCharsets.UTF_8.name()));
+                            result.stderr = new String(stderr.toByteArray(),charset.orElse(StandardCharsets.UTF_8.name()));
                             if (process.exitValue() != 0) {
                                 result.isSuccess = false;
                             } else {
