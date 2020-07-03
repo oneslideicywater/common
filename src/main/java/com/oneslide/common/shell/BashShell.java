@@ -1,5 +1,7 @@
 package com.oneslide.common.shell;
 
+import com.jcraft.jsch.JSchException;
+
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -44,6 +46,15 @@ public class BashShell {
 
         public void setSuccess(boolean success) {
             isSuccess = success;
+        }
+
+        @Override
+        public String toString() {
+            return "ShellResult{" +
+                    "stderr='" + stderr + '\'' +
+                    ", stdout='" + stdout + '\'' +
+                    ", isSuccess=" + isSuccess +
+                    '}';
         }
     }
 
@@ -111,6 +122,22 @@ public class BashShell {
     public static ShellResult executeCommand(String command) throws Exception {
         return executeCommand(command, null,Optional.empty());
     }
+
+    /**
+     * request new SSH connection terminal,please reuse it as often as usable,
+     * you can issue many command with SSHManager
+     * @param username username,such as 'root'
+     * @param password user password
+     * @param ip remote machine ip
+     *
+     * @return SSHManager represent a window in xshell
+     * **/
+    public static SSHManager requestNewSSHConnection(String username,String password,String ip) throws Exception {
+        SSHManager instance = new SSHManager(new SSHConnectionInfo(username, password,ip));
+        instance.connect();
+        return instance;
+    }
+
 
     // generate platform specific command line
     private static String[] platformSpecificCommand(String command) {
