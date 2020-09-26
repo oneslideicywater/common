@@ -1,10 +1,11 @@
 package com.oneslide.common.shell;
 
+import com.jcraft.jsch.Channel;
 import com.jcraft.jsch.JSchException;
+import net.sf.expectit.Expect;
+import net.sf.expectit.ExpectBuilder;
 
-import java.io.File;
-import java.io.IOException;
-import java.io.InputStream;
+import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.List;
@@ -91,8 +92,8 @@ public class BashShell {
                             inputStream.close();
                             errStream.close();
 
-                            result.stdout = new String(stdout.toByteArray(),charset.orElse(StandardCharsets.UTF_8.name()));
-                            result.stderr = new String(stderr.toByteArray(),charset.orElse(StandardCharsets.UTF_8.name()));
+                            result.stdout = new String(stdout.toByteArray(), charset.orElse(StandardCharsets.UTF_8.name()));
+                            result.stderr = new String(stderr.toByteArray(), charset.orElse(StandardCharsets.UTF_8.name()));
                             if (process.exitValue() != 0) {
                                 result.isSuccess = false;
                             } else {
@@ -119,21 +120,59 @@ public class BashShell {
         }
     }
 
+    /**
+     * interactive exec a shell command on remote machine
+     *
+     * @param channel   channel opened by SSHManager session
+     * @param command   shell command in bytes(due to some nonprintables key press)
+     * @param sendEnter issue an enter key press after this command exec,do it if true
+     * @throws Exception any reason failed
+     **/
+    public static String interactiveExecRemoteCommand(Channel channel, byte[] command, boolean sendEnter) throws Exception {
+
+
+        ByteArrayOutputStream responseStream = new ByteArrayOutputStream();
+        channel.setOutputStream(responseStream);
+        ByteArrayInputStream inputStream = new ByteArrayInputStream(command);
+        channel.setInputStream(inputStream);
+        PrintStream printStream = new PrintStream(responseStream);
+        Expect expect = new ExpectBuilder()
+                .withOutput(channel.getOutputStream())
+                .withInputs(channel.getInputStream(), channel.getExtInputStream())
+                //.withEchoOutput(System.out)
+                .withEchoInput(printStream)
+                //        .withInputFilters(removeColors(), removeNonPrintable())
+                .withExceptionOnFailure()
+                .build();
+        expect.sendBytes(command);
+        if (sendEnter) expect.sendLine();
+        responseStream.flush();
+        Thread.sleep(1000);
+        byte[] rep = responseStream.toByteArray();
+
+        // clear resource
+        responseStream.close();
+        inputStream.close();
+        expect.close();
+
+        return new String(rep);
+    }
+
     public static ShellResult executeCommand(String command) throws Exception {
-        return executeCommand(command, null,Optional.empty());
+        return executeCommand(command, null, Optional.empty());
     }
 
     /**
      * request new SSH connection terminal,please reuse it as often as usable,
      * you can issue many command with SSHManager
+     *
      * @param username username,such as 'root'
      * @param password user password
-     * @param ip remote machine ip
-     *
+     * @param ip       remote machine ip
      * @return SSHManager represent a window in xshell
-     * **/
-    public static SSHManager requestNewSSHConnection(String username,String password,String ip) throws Exception {
-        SSHManager instance = new SSHManager(new SSHConnectionInfo(username, password,ip));
+     **/
+    public static SSHManager requestNewSSHConnection(String username, String password, String ip) throws Exception {
+        SSHManager instance = new SSHManager(new SSHConnectionInfo(username, password, ip));
         instance.connect();
         return instance;
     }

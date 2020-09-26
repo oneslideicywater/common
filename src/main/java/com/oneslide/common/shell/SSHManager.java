@@ -1,9 +1,12 @@
 package com.oneslide.common.shell;
 
 import com.jcraft.jsch.*;
+import net.sf.expectit.Expect;
+import net.sf.expectit.ExpectBuilder;
 
-import java.io.IOException;
-import java.io.InputStream;
+import static net.sf.expectit.matcher.Matchers.regexp;
+
+import java.io.*;
 
 public class SSHManager {
     /*library object*/
@@ -30,6 +33,20 @@ public class SSHManager {
         session.setConfig(config);
         session.connect(info.getTimeout());
     }
+
+    public static void main(String[] args) throws Exception {
+        SSHConnectionInfo connectionInfo=new SSHConnectionInfo("root","icywater",
+                "192.168.10.6",22,60000);
+        SSHManager manager=new SSHManager(connectionInfo);
+        manager.connect();
+        Channel channel= manager.getSession().openChannel("shell");
+        channel.connect(3*1000);
+        
+
+        channel.disconnect();
+    }
+
+
 
     public BashShell.ShellResult executeRemoteCommand(String command) {
         BashShell.ShellResult result = new BashShell.ShellResult();
@@ -67,10 +84,19 @@ public class SSHManager {
         return result;
     }
 
+
     /**
      * close the long running session
      **/
     public void close() {
         session.disconnect();
+    }
+
+    public Session getSession() {
+        return session;
+    }
+
+    public void setSession(Session session) {
+        this.session = session;
     }
 }
