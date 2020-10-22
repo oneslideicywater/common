@@ -15,6 +15,9 @@ import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
+import static net.sf.expectit.filter.Filters.removeColors;
+import static net.sf.expectit.filter.Filters.removeNonPrintable;
+
 /**
  * bash shell command utils,currently only support windows and linux,if the platform is others
  * which is judge by jvm runtime,you'll get a "linux suites" for default.
@@ -141,7 +144,7 @@ public class BashShell {
                 .withInputs(channel.getInputStream(), channel.getExtInputStream())
                 //.withEchoOutput(System.out)
                 .withEchoInput(printStream)
-                //        .withInputFilters(removeColors(), removeNonPrintable())
+                .withInputFilters(removeColors(), removeNonPrintable())
                 .withExceptionOnFailure()
                 .build();
         expect.sendBytes(command);

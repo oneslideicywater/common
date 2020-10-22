@@ -6,7 +6,7 @@
 
     <groupId>com.oneslide</groupId>
     <artifactId>common</artifactId>
-    <version>1.0</version>
+    <version>1.0.2</version>
 
     <dependencies>
         <!-- https://mvnrepository.com/artifact/com.jcraft/jsch -->
@@ -34,7 +34,26 @@
                     <target>1.8</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-source-plugin</artifactId>
+                <version>3.0.1</version>
+                <executions>
+                    <execution>
+                        <id>attach-sources</id>
+                        <goals>
+                            <goal>jar</goal>
+                        </goals>
+                    </execution>
+                </executions>
+            </plugin>
+
         </plugins>
     </build>
-
+    <distributionManagement>
+        <repository>
+            <id>nexus</id>
+            <url>http://gitlab.cicd.com:8089/repository/snap/</url>
+        </repository>
+    </distributionManagement>
 </project>

@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Title</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.1/codemirror.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/codemirror/5.58.1/codemirror.min.js"></script>
+</head>
+<body>
+
+
+    <textarea id="log">$ </textarea>
+
+    <script>
+        let myTextarea=document.getElementById("log");
+        var index=1;
+        let editor = CodeMirror.fromTextArea(myTextarea, {
+        lineNumbers: true
+         });
+        editor.setOption("extraKeys", {
+            Enter: function(cm) {
+                var doc = cm.getDoc();
+                var cursor = doc.getCursor(); // gets the line number in the cursor position
+
+                // 获取最后一行
+                let lastLine = doc.lastLine()
+                cursor.line =lastLine
+                cursor.ch = doc.getLine(lastLine).length
+                doc.setCursor(cursor)
+
+                var line = doc.getLine(cursor.line); // get the line contents
+                var pos = { // create a new object to avoid mutation of the original selection
+                    line: cursor.line,
+                    ch: line.length // set the character position to the end of the line
+                }
+
+
+                let cmd=line.substr(index)
+                console.log(cmd)
+                let data="server invalid \n[root@localhost]# " // request http interface
+                doc.replaceRange("\n"+data, pos); // adds a new line
+               // console.log("after change:"+JSON.stringify(editor.getCursor()))
+                index=editor.getCursor().ch
+
+
+
+               // return CodeMirror.Pass
+            },
+            Backspace:function (cm) {
+                 let cursor=cm.getDoc().getCursor()
+                 if (cursor.ch > index){
+                     return CodeMirror.Pass
+                 }
+            },
+            [3-100]:function () {
+                console.log("hello")
+            }
+        });
+</script>
+</body>
+</html>
